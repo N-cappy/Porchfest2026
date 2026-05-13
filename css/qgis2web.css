@@ -319,8 +319,8 @@ position: relative;
     }
 #menu .filterselect {
     width: 100%;
-    display: block;
     box-sizing: border-box;
+
     }
 }
 #menu select[multiple] {
