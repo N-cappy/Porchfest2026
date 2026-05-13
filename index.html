@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/L.Control.Locate.min.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/nouislider.min.css">
+        <link rel="stylesheet" href="css/leaflet.photon.css">
+        <style>
+        html, body, {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title></title>
+    </head>
+    <body>
+	<div id="header">
+   		<img id="chair" src="css/images/chair.png" alt="Chair">
+   		<img id="mainHeader" src="css/images/header.png" alt="Map Header">
+  	<div id="filterToggle">Filters</div>
+	</div>
+	<div id="map"></div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+	<script src="js/OverlappingMarkerSpiderfier.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/L.Control.Locate.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.photon.js"></script>
+        <script src="js/tailDT.js"></script>
+<script src="js/nouislider.min.js"></script>
+<script src="js/wNumb.js"></script>
+        <script src="data/geocodeq_1.js"></script>
+        <script>
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        });
+	var oms = new OverlappingMarkerSpiderfier(map, {
+  	  keepSpiderfied: true,
+  	  nearbyDistance: 20,
+   	 circleSpiralSwitchover: 9
+	});
+	var isSpiderfying = false;
+	oms.addListener('spiderfy', function(markers) {
+   	 isSpiderfying = true;
+  	  markers.forEach(function(marker) {
+    	    marker.closePopup();
+  	  });
+    setTimeout(function() {
+        isSpiderfying = false;
+    }, 100);
+});
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/qgis2web/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // modify popup if contains media
+        function addClassToPopupIfMedia(content, popup) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            var imgTd = tempDiv.querySelector('td img');
+            if (imgTd) {
+                var src = imgTd.getAttribute('src');
+                if (/\.(jpg|jpeg|png|gif|bmp|webp|avif)$/i.test(src)) {
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp3|wav|ogg|aac)$/i.test(src)) {
+                    var audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = src;
+                    imgTd.parentNode.replaceChild(audio, imgTd);
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp4|webm|ogg|mov)$/i.test(src)) {
+                    var video = document.createElement('video');
+                    video.controls = true;
+                    video.src = src;
+                    video.style.width = "400px";
+                    video.style.height = "300px";
+                    video.style.maxHeight = "60vh";
+                    video.style.maxWidth = "60vw";
+                    imgTd.parentNode.replaceChild(video, imgTd);
+                    popup._contentNode.classList.add('media');
+                    // Aggiorna il popup quando il video carica i metadati
+                    video.addEventListener('loadedmetadata', function() {
+                        popup.update();
+                    });
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else {
+                    popup._contentNode.classList.remove('media');
+                }
+            } else {
+                popup._contentNode.classList.remove('media');
+            }
+        }
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        L.control.locate({locateOptions: {maxZoom: 19}}).addTo(map);
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+            if (bounds_group.getLayers().length) {
+                map.fitBounds(bounds_group.getBounds());
+            }
+        }
+        map.createPane('pane_OSMStandard_0');
+        map.getPane('pane_OSMStandard_0').style.zIndex = 400;
+        var layer_OSMStandard_0 = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            pane: 'pane_OSMStandard_0',
+            opacity: 1.0,
+            attribution: '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors, CC-BY-SA</a>',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 19
+        });
+        layer_OSMStandard_0;
+        map.addLayer(layer_OSMStandard_0);
+        function pop_geocodeq_1(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Artist Nam</th>\
+                        <td class="visible-with-data" id="Artist Nam">' + (feature.properties['Artist Nam'] !== null ? autolinker.link(String(feature.properties['Artist Nam']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Genre</th>\
+                        <td class="visible-with-data" id="Genre">' + (feature.properties['Genre'] !== null ? autolinker.link(String(feature.properties['Genre']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Address</th>\
+                        <td class="visible-with-data" id="Address">' + (feature.properties['Address'] !== null ? autolinker.link(String(feature.properties['Address']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Time</th>\
+                        <td class="visible-with-data" id="Time">' + (feature.properties['Time'] !== null ? autolinker.link(String(feature.properties['Time']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Googe Maps</th>\
+                        <td class="visible-with-data" id="Googe Maps">' + (feature.properties['Googe Maps'] !== null ? autolinker.link(String(feature.properties['Googe Maps']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+			</tr>\
+                    <tr>\
+                        <th scope="row">Apple Maps</th>\
+                        <td class="visible-with-data" id="Apple Maps">' + (feature.properties['Apple Maps'] !== null ? autolinker.link(String(feature.properties['Apple Maps']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+		layer.bindPopup(content, { maxHeight: 400 });
+		layer.on('popupopen', function(e) {
+   		 if (isSpiderfying) {
+     		   layer.closePopup();
+   		 }
+		});
+		}
+	        function style_geocodeq_1_0() {
+            return {
+                pane: 'pane_geocodeq_1',
+        rotationAngle: 0.0,
+        rotationOrigin: 'center center',
+        icon: L.icon({
+            iconUrl: 'markers/geocodeq_1.svg',
+            iconSize: [34.199999999999996, 34.199999999999996]
+        }),
+                interactive: true,
+            }
+        }
+        map.createPane('pane_geocodeq_1');
+        map.getPane('pane_geocodeq_1').style.zIndex = 401;
+        map.getPane('pane_geocodeq_1').style['mix-blend-mode'] = 'normal';
+        var layer_geocodeq_1 = new L.geoJson(json_geocodeq_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_geocodeq_1',
+            layerName: 'layer_geocodeq_1',
+            pane: 'pane_geocodeq_1',
+            onEachFeature: pop_geocodeq_1,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+		var marker = L.marker(latlng, style_geocodeq_1_0(feature));
+		marker.on('click', function(e) {
+    		if (isSpiderfying) {
+      		  L.DomEvent.stop(e);      
+       		 marker.closePopup();            		
+		 return;
+   		 }
+		});
+
+		oms.addMarker(marker);   // spiderfy still works
+		return marker;
+
+           	 },
+        });
+        bounds_group.addLayer(layer_geocodeq_1);
+        map.addLayer(layer_geocodeq_1);
+        const url = {"Nominatim OSM": "https://nominatim.openstreetmap.org/search?format=geojson&addressdetails=1&",
+        "France BAN": "https://api-adresse.data.gouv.fr/search/?"}
+        var photonControl = L.control.photon({
+            url: url["Nominatim OSM"],
+            feedbackLabel: '',
+            position: 'topleft',
+            includePosition: true,
+            initial: true,
+            // resultsHandler: myHandler,
+        }).addTo(map);
+        photonControl._container.childNodes[0].style.borderRadius="10px"
+        // Create a variable to store the geoJSON data
+        var x = null;
+        // Create a variable to store the marker
+        var marker = null;
+        // Add an event listener to the Photon control to create a marker from the returned geoJSON data
+        var z = null;
+        photonControl.on('selected', function(e) {
+            console.log(photonControl.search.resultsContainer);
+            if (x != null) {
+                map.removeLayer(obj3.marker);
+                map.removeLayer(x);
+            }
+            obj2.gcd = e.choice;
+            x = L.geoJSON(obj2.gcd).addTo(map);
+            var label = typeof obj2.gcd.properties.label === 'undefined' ? obj2.gcd.properties.display_name : obj2.gcd.properties.label;
+            obj3.marker = L.marker(x.getLayers()[0].getLatLng()).bindPopup(label).addTo(map);
+            map.setView(x.getLayers()[0].getLatLng(), 17);
+            z = typeof e.choice.properties.label === 'undefined'? e.choice.properties.display_name : e.choice.properties.label;
+            console.log(e);
+            e.target.input.value = z;
+        });
+        var search = document.getElementsByClassName("leaflet-photon leaflet-control")[0];
+        search.classList.add("leaflet-control-search")
+        search.style.display = "flex";
+        search.style.backgroundColor="rgba(255,255,255,0.5)" 
+
+        // Create the new button element
+        var button = document.createElement("div");
+        button.id = "gcd-button-control";
+        button.className = "gcd-gl-btn fa fa-search search-button";
+
+        // Insert the button at the beginning of the search control
+        search.insertBefore(button, search.firstChild);
+        last = search.lastChild;
+        last.style.display = "none";
+        button.addEventListener("click", function (e) {
+            if (last.style.display === "none") {
+                last.style.display = "block";
+            } else {
+                last.style.display = "none";
+            }
+        });
+        setBounds();
+        var mapDiv = document.getElementById('map');
+        var row = document.createElement('div');
+        row.className="row";
+        row.id="all";
+        row.style.height = "100%";
+        var col1 = document.createElement('div');
+        col1.className="col9";
+        col1.id = "mapWindow";
+        col1.style.height = "99%";
+        col1.style.width = "80%";
+        col1.style.display = "inline-block";
+        var col2 = document.createElement('div');
+        col2.className="col3";
+        col2.id = "menu";
+        col2.style.display = "inline-block";
+        mapDiv.parentNode.insertBefore(row, mapDiv);
+        document.getElementById("all").appendChild(col1);
+        document.getElementById("all").appendChild(col2);
+        col1.appendChild(mapDiv)
+        var Filters = {"Time": "str","Genre": "str"};
+        function filterFunc() {
+          map.eachLayer(function(lyr){
+          if ("options" in lyr && "dataVar" in lyr["options"]){
+            features = this[lyr["options"]["dataVar"]].features.slice(0);
+            try{
+              for (key in Filters){
+                keyS = key.replace(/[^a-zA-Z0-9_]/g, "")
+                if (Filters[key] == "str" || Filters[key] == "bool"){
+                  var selection = [];
+                  var options = document.getElementById("sel_" + keyS).options
+                  for (var i=0; i < options.length; i++) {
+                    if (options[i].selected) selection.push(options[i].value);
+                  }
+                    try{
+                      if (key in features[0].properties){
+                        for (i = features.length - 1;
+                          i >= 0; --i){
+                          if (selection.indexOf(
+                          features[i].properties[key])<0
+                          && selection.length>0) {
+                          features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                  }
+                }
+                if (Filters[key] == "int"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (parseInt(features[i].properties[key])
+                          < sliderVals[0]
+                          || parseInt(features[i].properties[key])
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "real"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (features[i].properties[key]
+                          < sliderVals[0]
+                          || features[i].properties[key]
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "date"
+                  || Filters[key] == "datetime"
+                  || Filters[key] == "time"){
+                  try{
+                    if (key in features[0].properties){
+                      HTMLkey = key.replace(/[&\/\\#,+()$~%.'":*?<>{} ]/g, '');
+                      startdate = document.getElementById("dat_" +
+                        HTMLkey + "_date1").value.replace(" ", "T");
+                      enddate = document.getElementById("dat_" +
+                        HTMLkey + "_date2").value.replace(" ", "T");
+                      for (i = features.length - 1; i >= 0; --i){
+                        if (features[i].properties[key] < startdate
+                          || features[i].properties[key] > enddate){
+                          features.splice(i,1);
+                        }
+                      }
+                    }
+                  } catch(err){
+                  }
+                }
+              }
+            } catch(err){
+            }
+          this[lyr["options"]["layerName"]].clearLayers();
+          this[lyr["options"]["layerName"]].addData(features);
+          }
+          })
+        }
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Time = document.createElement('div');
+            div_Time.id = "div_Time";
+            div_Time.className= "filterselect";
+            document.getElementById("menu").appendChild(div_Time);
+            sel_Time = document.createElement('select');
+            sel_Time.multiple = true;
+            sel_Time.size = 10;
+            sel_Time.id = "sel_Time";
+            var Time_options_str = "<option value='' unselected></option>";
+            sel_Time.onchange = function(){filterFunc()};
+            Time_options_str  += '<option value="12:00 PM">12:00 PM</option>';
+            Time_options_str  += '<option value="12:15 PM">12:15 PM</option>';
+            Time_options_str  += '<option value="12:30 PM">12:30 PM</option>';
+            Time_options_str  += '<option value="12:40 PM">12:40 PM</option>';
+            Time_options_str  += '<option value="12:45 PM">12:45 PM</option>';
+            Time_options_str  += '<option value="1:00 PM">1:00 PM</option>';
+            Time_options_str  += '<option value="1:20 PM">1:20 PM</option>';
+            Time_options_str  += '<option value="1:30 PM">1:30 PM</option>';
+            Time_options_str  += '<option value="1:45 PM">1:45 PM</option>';
+            Time_options_str  += '<option value="2:00 PM">2:00 PM</option>';
+            Time_options_str  += '<option value="2:15 PM">2:15 PM</option>';
+            Time_options_str  += '<option value="2:30 PM">2:30 PM</option>';
+            Time_options_str  += '<option value="2:40 PM">2:40 PM</option>';
+            Time_options_str  += '<option value="2:45 PM">2:45 PM</option>';
+            Time_options_str  += '<option value="3:00 PM">3:00 PM</option>';
+            Time_options_str  += '<option value="3:15 PM">3:15 PM</option>';
+            Time_options_str  += '<option value="3:20 PM">3:20 PM</option>';
+            Time_options_str  += '<option value="3:30 PM">3:30 PM</option>';
+            Time_options_str  += '<option value="3:45 PM">3:45 PM</option>';
+            Time_options_str  += '<option value="4:00 PM">4:00 PM</option>';
+            Time_options_str  += '<option value="4:15 PM">4:15 PM</option>';
+            Time_options_str  += '<option value="4:30 PM">4:30 PM</option>';
+            Time_options_str  += '<option value="4:45 PM">4:45 PM</option>';
+            Time_options_str  += '<option value="5:00 PM">5:00 PM</option>';
+            Time_options_str  += '<option value="5:30 PM">5:30 PM</option>';
+            sel_Time.innerHTML = Time_options_str;
+            div_Time.appendChild(sel_Time);
+            var lab_Time = document.createElement('div');
+            lab_Time.innerHTML = 'Time';
+            lab_Time.className = 'filterlabel';
+            div_Time.appendChild(lab_Time);
+            var reset_Time = document.createElement('div');
+            reset_Time.innerHTML = 'clear filter';
+            reset_Time.className = 'filterlabel';
+            reset_Time.onclick = function() {
+                var options = document.getElementById("sel_Time").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_Time.appendChild(reset_Time);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Genre = document.createElement('div');
+            div_Genre.id = "div_Genre";
+            div_Genre.className= "filterselect";
+            document.getElementById("menu").appendChild(div_Genre);
+            sel_Genre = document.createElement('select');
+            sel_Genre.multiple = true;
+            sel_Genre.size = 10;
+            sel_Genre.id = "sel_Genre";
+            var Genre_options_str = "<option value='' unselected></option>";
+            sel_Genre.onchange = function(){filterFunc()};
+            Genre_options_str  += '<option value="1920S JAZZ">1920S JAZZ</option>';
+            Genre_options_str  += '<option value="80S, 90S, AND MODERN COVERS">80S, 90S, AND MODERN COVERS</option>';
+            Genre_options_str  += '<option value="90&apos;S ROCK COVERS">90&apos;S ROCK COVERS</option>';
+            Genre_options_str  += '<option value="90S ALT ROCK">90S ALT ROCK</option>';
+            Genre_options_str  += '<option value="90S/00S POP ROCK COVERS">90S/00S POP ROCK COVERS</option>';
+            Genre_options_str  += '<option value="90S/GRUNGE COVER BAND">90S/GRUNGE COVER BAND</option>';
+            Genre_options_str  += '<option value="A CAPPELLA">A CAPPELLA</option>';
+            Genre_options_str  += '<option value="ACOUSTIC">ACOUSTIC</option>';
+            Genre_options_str  += '<option value="ACOUSTIC COVER BAND DUO">ACOUSTIC COVER BAND DUO</option>';
+            Genre_options_str  += '<option value="ACOUSTIC COVER DUO">ACOUSTIC COVER DUO</option>';
+            Genre_options_str  += '<option value="ACOUSTIC COVERS">ACOUSTIC COVERS</option>';
+            Genre_options_str  += '<option value="ACOUSTIC DEAD, DYLAN AND STUFF">ACOUSTIC DEAD, DYLAN AND STUFF</option>';
+            Genre_options_str  += '<option value="ACOUSTIC FOLK SINGER/SONGWRITER">ACOUSTIC FOLK SINGER/SONGWRITER</option>';
+            Genre_options_str  += '<option value="ACOUSTIC FOLK, ROOTS, ROCK, REGGAE, SOUL, R&B, BLUES">ACOUSTIC FOLK, ROOTS, ROCK, REGGAE, SOUL, R&B, BLUES</option>';
+            Genre_options_str  += '<option value="ACOUSTIC ROCK AND BLUES">ACOUSTIC ROCK AND BLUES</option>';
+            Genre_options_str  += '<option value="ACOUSTIC ROCK COVERS">ACOUSTIC ROCK COVERS</option>';
+            Genre_options_str  += '<option value="ACOUSTIC SOUL">ACOUSTIC SOUL</option>';
+            Genre_options_str  += '<option value="ACTIVIST STREET BAND">ACTIVIST STREET BAND</option>';
+            Genre_options_str  += '<option value="AFROFUNK">AFROFUNK</option>';
+            Genre_options_str  += '<option value="ALT ROCK">ALT ROCK</option>';
+            Genre_options_str  += '<option value="AMERICANA / FOLK / ROCK / COUNTRY">AMERICANA / FOLK / ROCK / COUNTRY</option>';
+            Genre_options_str  += '<option value="AMERICANA, CLASSIC ROCK">AMERICANA, CLASSIC ROCK</option>';
+            Genre_options_str  += '<option value="AMERICANA/FOLK/ACOUSTIC">AMERICANA/FOLK/ACOUSTIC</option>';
+            Genre_options_str  += '<option value="AMERICANA/FOLK/BLUES">AMERICANA/FOLK/BLUES</option>';
+            Genre_options_str  += '<option value="AMERICANA/SINGER-SONGWRITER">AMERICANA/SINGER-SONGWRITER</option>';
+            Genre_options_str  += '<option value="ANTI-CAPITALIST FOLK">ANTI-CAPITALIST FOLK</option>';
+            Genre_options_str  += '<option value="ART ROCK">ART ROCK</option>';
+            Genre_options_str  += '<option value="BLUEGRASS">BLUEGRASS</option>';
+            Genre_options_str  += '<option value="BLUEGRASS, FOLK">BLUEGRASS, FOLK</option>';
+            Genre_options_str  += '<option value="BRASS ENSEMBLE">BRASS ENSEMBLE</option>';
+            Genre_options_str  += '<option value="CAJUN">CAJUN</option>';
+            Genre_options_str  += '<option value="CHILDREN&apos;S MUSIC">CHILDREN&apos;S MUSIC</option>';
+            Genre_options_str  += '<option value="CHOIR">CHOIR</option>';
+            Genre_options_str  += '<option value="CLASSIC & 90S ROCK">CLASSIC & 90S ROCK</option>';
+            Genre_options_str  += '<option value="CLASSIC HITS & ORIGINALS">CLASSIC HITS & ORIGINALS</option>';
+            Genre_options_str  += '<option value="CLASSIC ROCK">CLASSIC ROCK</option>';
+            Genre_options_str  += '<option value="CLASSIC ROCK & OTHER ROCK COVERS">CLASSIC ROCK & OTHER ROCK COVERS</option>';
+            Genre_options_str  += '<option value="CLASSIC ROCK - FOLK - INDIE">CLASSIC ROCK - FOLK - INDIE</option>';
+            Genre_options_str  += '<option value="CLASSIC ROCK AND ORIGINALS">CLASSIC ROCK AND ORIGINALS</option>';
+            Genre_options_str  += '<option value="CLASSIC ROCK/JAZZ/BLUES">CLASSIC ROCK/JAZZ/BLUES</option>';
+            Genre_options_str  += '<option value="CLASSICAL GUITAR">CLASSICAL GUITAR</option>';
+            Genre_options_str  += '<option value="CONTRADANCE BAND">CONTRADANCE BAND</option>';
+            Genre_options_str  += '<option value="COUNTRY ROCK TRIO">COUNTRY ROCK TRIO</option>';
+            Genre_options_str  += '<option value="COUNTRY-DRENCHED ROCK">COUNTRY-DRENCHED ROCK</option>';
+            Genre_options_str  += '<option value="COVER BAND - POP, ROCK, FUNK">COVER BAND - POP, ROCK, FUNK</option>';
+            Genre_options_str  += '<option value="DAD GRASS">DAD GRASS</option>';
+            Genre_options_str  += '<option value="DJ">DJ</option>';
+            Genre_options_str  += '<option value="DJANGO GYPSY JAZZ">DJANGO GYPSY JAZZ</option>';
+            Genre_options_str  += '<option value="DJING AND BREAKING">DJING AND BREAKING</option>';
+            Genre_options_str  += '<option value="ECLECTIC FOLK/ROCK">ECLECTIC FOLK/ROCK</option>';
+            Genre_options_str  += '<option value="ECLECTIC ROCK COVERS">ECLECTIC ROCK COVERS</option>';
+            Genre_options_str  += '<option value="ELECTIC FOLK MUSIC">ELECTIC FOLK MUSIC</option>';
+            Genre_options_str  += '<option value="ELECTRIC COVERS FROM 60S/70S/80S">ELECTRIC COVERS FROM 60S/70S/80S</option>';
+            Genre_options_str  += '<option value="ELECTRONIC LOOPING">ELECTRONIC LOOPING</option>';
+            Genre_options_str  += '<option value="ELECTRONICS & ACCORDION">ELECTRONICS & ACCORDION</option>';
+            Genre_options_str  += '<option value="ETHEREAL FOLK COUNTRY ALT">ETHEREAL FOLK COUNTRY ALT</option>';
+            Genre_options_str  += '<option value="FATHER SON ACOUSTIC DUO">FATHER SON ACOUSTIC DUO</option>';
+            Genre_options_str  += '<option value="FOLK">FOLK</option>';
+            Genre_options_str  += '<option value="FOLK ACOUSTIC">FOLK ACOUSTIC</option>';
+            Genre_options_str  += '<option value="FOLK ACOUSTIC DUO">FOLK ACOUSTIC DUO</option>';
+            Genre_options_str  += '<option value="FOLK FINGERSTYLE SONGWRITER">FOLK FINGERSTYLE SONGWRITER</option>';
+            Genre_options_str  += '<option value="FOLK GUITARIST">FOLK GUITARIST</option>';
+            Genre_options_str  += '<option value="FOLK ROCK">FOLK ROCK</option>';
+            Genre_options_str  += '<option value="FOLK ROCK / 90S ALT ROCK">FOLK ROCK / 90S ALT ROCK</option>';
+            Genre_options_str  += '<option value="FOLK ROCK DUO">FOLK ROCK DUO</option>';
+            Genre_options_str  += '<option value="FOLK ROCK, ORIGINALS">FOLK ROCK, ORIGINALS</option>';
+            Genre_options_str  += '<option value="FOLK, ACOUSTIC">FOLK, ACOUSTIC</option>';
+            Genre_options_str  += '<option value="FOLK, ALTERNATIVE">FOLK, ALTERNATIVE</option>';
+            Genre_options_str  += '<option value="FOLK, COUNTRY">FOLK, COUNTRY</option>';
+            Genre_options_str  += '<option value="FOLK-ROCK COVER BAND">FOLK-ROCK COVER BAND</option>';
+            Genre_options_str  += '<option value="FOLK/ACOUSTIC">FOLK/ACOUSTIC</option>';
+            Genre_options_str  += '<option value="FOLK/COUNTRY/BLUES/R&B/SOFT ROCK DUO">FOLK/COUNTRY/BLUES/R&B/SOFT ROCK DUO</option>';
+            Genre_options_str  += '<option value="FOLK/INDIE/POP DUO">FOLK/INDIE/POP DUO</option>';
+            Genre_options_str  += '<option value="FOLK/JAM">FOLK/JAM</option>';
+            Genre_options_str  += '<option value="FOLK/POP/SOUL">FOLK/POP/SOUL</option>';
+            Genre_options_str  += '<option value="FREAK FOLK">FREAK FOLK</option>';
+            Genre_options_str  += '<option value="FRENCH JAZZ AND MORE">FRENCH JAZZ AND MORE</option>';
+            Genre_options_str  += '<option value="FUNK/DISCO">FUNK/DISCO</option>';
+            Genre_options_str  += '<option value="FUNKY PIRATE PARTY EXPERIENCE">FUNKY PIRATE PARTY EXPERIENCE</option>';
+            Genre_options_str  += '<option value="GARAGE/JANGLE/ALTERNATIVE ROCK">GARAGE/JANGLE/ALTERNATIVE ROCK</option>';
+            Genre_options_str  += '<option value="HAWAIIAN FOLK MUSIC">HAWAIIAN FOLK MUSIC</option>';
+            Genre_options_str  += '<option value="HIGH OCTANE GARAGE ROCK ORIGINALS">HIGH OCTANE GARAGE ROCK ORIGINALS</option>';
+            Genre_options_str  += '<option value="HIP HOP">HIP HOP</option>';
+            Genre_options_str  += '<option value="HIP HOP, ROCK">HIP HOP, ROCK</option>';
+            Genre_options_str  += '<option value="INDIE COVERS">INDIE COVERS</option>';
+            Genre_options_str  += '<option value="INDIE FOLK">INDIE FOLK</option>';
+            Genre_options_str  += '<option value="INDIE FOLK ROCK">INDIE FOLK ROCK</option>';
+            Genre_options_str  += '<option value="INDIE ORIGINALS">INDIE ORIGINALS</option>';
+            Genre_options_str  += '<option value="INDIE POP PIANO ROCK">INDIE POP PIANO ROCK</option>';
+            Genre_options_str  += '<option value="INDIE ROCK">INDIE ROCK</option>';
+            Genre_options_str  += '<option value="INDIE ROCK DUO">INDIE ROCK DUO</option>';
+            Genre_options_str  += '<option value="INDIE ROCK ORIGINALS">INDIE ROCK ORIGINALS</option>';
+            Genre_options_str  += '<option value="INDIE ROCK WITH TEETH">INDIE ROCK WITH TEETH</option>';
+            Genre_options_str  += '<option value="INDIE ROCK, INDIE FOLK">INDIE ROCK, INDIE FOLK</option>';
+            Genre_options_str  += '<option value="INDIE ROCK/ALT-COUNTRY">INDIE ROCK/ALT-COUNTRY</option>';
+            Genre_options_str  += '<option value="INTERNATIONAL MUSIC">INTERNATIONAL MUSIC</option>';
+            Genre_options_str  += '<option value="IRISH FOLK/PUB ROCK">IRISH FOLK/PUB ROCK</option>';
+            Genre_options_str  += '<option value="JAZZ">JAZZ</option>';
+            Genre_options_str  += '<option value="JAZZ / ELECTRONIC">JAZZ / ELECTRONIC</option>';
+            Genre_options_str  += '<option value="JAZZ PSYCH ROCK">JAZZ PSYCH ROCK</option>';
+            Genre_options_str  += '<option value="JAZZ, FUNK, BLUES">JAZZ, FUNK, BLUES</option>';
+            Genre_options_str  += '<option value="JAZZ/CLASSICAL IMPROVISATION">JAZZ/CLASSICAL IMPROVISATION</option>';
+            Genre_options_str  += '<option value="KID FOCUSED MUSIC">KID FOCUSED MUSIC</option>';
+            Genre_options_str  += '<option value="KLEZMER">KLEZMER</option>';
+            Genre_options_str  += '<option value="MASTER DRUMMER FROM MALI">MASTER DRUMMER FROM MALI</option>';
+            Genre_options_str  += '<option value="MELODIC MELANCHOLY">MELODIC MELANCHOLY</option>';
+            Genre_options_str  += '<option value="MIDDLE EASTERN INDIE ROCK">MIDDLE EASTERN INDIE ROCK</option>';
+            Genre_options_str  += '<option value="MISSISSIPPI BLUES">MISSISSIPPI BLUES</option>';
+            Genre_options_str  += '<option value="MODERN CHORAL MUSIC">MODERN CHORAL MUSIC</option>';
+            Genre_options_str  += '<option value="NEIL YOUNG TRIBUTE">NEIL YOUNG TRIBUTE</option>';
+            Genre_options_str  += '<option value="NEO-SOUL, JAZZ, R&B, FUNK">NEO-SOUL, JAZZ, R&B, FUNK</option>';
+            Genre_options_str  += '<option value="ODDITIES OF POP, BLUES, AND JAZZ">ODDITIES OF POP, BLUES, AND JAZZ</option>';
+            Genre_options_str  += '<option value="OLD TIME">OLD TIME</option>';
+            Genre_options_str  += '<option value="ORIGINAL COUNTRY">ORIGINAL COUNTRY</option>';
+            Genre_options_str  += '<option value="ORIGINAL INDIE ROCK">ORIGINAL INDIE ROCK</option>';
+            Genre_options_str  += '<option value="PARTY BRASS BAND">PARTY BRASS BAND</option>';
+            Genre_options_str  += '<option value="PIANO BAR">PIANO BAR</option>';
+            Genre_options_str  += '<option value="POP / INDIE ROCK">POP / INDIE ROCK</option>';
+            Genre_options_str  += '<option value="POP PUNK/ GARAGE ROCK">POP PUNK/ GARAGE ROCK</option>';
+            Genre_options_str  += '<option value="POP PUNK/ALT ROCK">POP PUNK/ALT ROCK</option>';
+            Genre_options_str  += '<option value="POP, ALTERNATIVE POP">POP, ALTERNATIVE POP</option>';
+            Genre_options_str  += '<option value="POP-COVER BAND">POP-COVER BAND</option>';
+            Genre_options_str  += '<option value="PSYCHEDELIC R&B">PSYCHEDELIC R&B</option>';
+            Genre_options_str  += '<option value="PUNK">PUNK</option>';
+            Genre_options_str  += '<option value="PURPLE ROCK PRINCESS">PURPLE ROCK PRINCESS</option>';
+            Genre_options_str  += '<option value="QUEER MUSIC SINGER/SONGWRITER">QUEER MUSIC SINGER/SONGWRITER</option>';
+            Genre_options_str  += '<option value="R&B, AND AFRO CARIBBEAN">R&B, AND AFRO CARIBBEAN</option>';
+            Genre_options_str  += '<option value="R&B, JAZZ, FUNK, SWING, BLUES">R&B, JAZZ, FUNK, SWING, BLUES</option>';
+            Genre_options_str  += '<option value="REGGAE">REGGAE</option>';
+            Genre_options_str  += '<option value="RETRO: SWING, BLUES, JAZZ">RETRO: SWING, BLUES, JAZZ</option>';
+            Genre_options_str  += '<option value="ROCK">ROCK</option>';
+            Genre_options_str  += '<option value="ROCK - CLASSIC 1970&apos;S COVERS">ROCK - CLASSIC 1970&apos;S COVERS</option>';
+            Genre_options_str  += '<option value="ROCK AND R&B COVER BAND">ROCK AND R&B COVER BAND</option>';
+            Genre_options_str  += '<option value="ROCK AND ROLL/AMERICANA">ROCK AND ROLL/AMERICANA</option>';
+            Genre_options_str  += '<option value="ROCK COVERS AND ORIGINALS">ROCK COVERS AND ORIGINALS</option>';
+            Genre_options_str  += '<option value="ROCK DUO">ROCK DUO</option>';
+            Genre_options_str  += '<option value="ROCK HITS AND DANCE">ROCK HITS AND DANCE</option>';
+            Genre_options_str  += '<option value="ROCK TRIO PLAYING COVERS">ROCK TRIO PLAYING COVERS</option>';
+            Genre_options_str  += '<option value="ROCK&ROLL ORIGINALS AND COVERS">ROCK&ROLL ORIGINALS AND COVERS</option>';
+            Genre_options_str  += '<option value="ROCK/FOLK/BLUES">ROCK/FOLK/BLUES</option>';
+            Genre_options_str  += '<option value="SCI FI SPACE ROCK">SCI FI SPACE ROCK</option>';
+            Genre_options_str  += '<option value="SHOEGAZE JAZZ ROCK">SHOEGAZE JAZZ ROCK</option>';
+            Genre_options_str  += '<option value="SINGER SONG METAL">SINGER SONG METAL</option>';
+            Genre_options_str  += '<option value="SINGER SONGWRITER">SINGER SONGWRITER</option>';
+            Genre_options_str  += '<option value="SINGER-SONGWRITER, FOLK, BLUES">SINGER-SONGWRITER, FOLK, BLUES</option>';
+            Genre_options_str  += '<option value="SINGER/SONGWRITER">SINGER/SONGWRITER</option>';
+            Genre_options_str  += '<option value="SINGER/SONGWRITER/COMEDY">SINGER/SONGWRITER/COMEDY</option>';
+            Genre_options_str  += '<option value="SOUL-INFUSED ROCK">SOUL-INFUSED ROCK</option>';
+            Genre_options_str  += '<option value="TBA">TBA</option>';
+            Genre_options_str  += '<option value="TRADITIONAL IRISH MUSIC">TRADITIONAL IRISH MUSIC</option>';
+            Genre_options_str  += '<option value="WALL OF FOLK">WALL OF FOLK</option>';
+            Genre_options_str  += '<option value="WHIMSICAL AND WISTFUL INDIE FOLK">WHIMSICAL AND WISTFUL INDIE FOLK</option>';
+            Genre_options_str  += '<option value="WORLD, EARLY, AND AMERICAN">WORLD, EARLY, AND AMERICAN</option>';
+            sel_Genre.innerHTML = Genre_options_str;
+            div_Genre.appendChild(sel_Genre);
+            var lab_Genre = document.createElement('div');
+            lab_Genre.innerHTML = 'Genre';
+            lab_Genre.className = 'filterlabel';
+            div_Genre.appendChild(lab_Genre);
+            var reset_Genre = document.createElement('div');
+            reset_Genre.innerHTML = 'clear filter';
+            reset_Genre.className = 'filterlabel';
+            reset_Genre.onclick = function() {
+                var options = document.getElementById("sel_Genre").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_Genre.appendChild(reset_Genre);
+		document.getElementById("filterToggle").onclick = function() {
+  	  var menu = document.getElementById("menu");
+   	 menu.classList.toggle("open");
+	  };
+        </script>        
+    </body>
+</html>
