@@ -402,9 +402,7 @@
           }
           })
         }
-            document.getElementById("menu").appendChild(
-                document.createElement("div"));
-     
+    
 		var div_Time = document.createElement('div');
 			div_Time.id = "div_Time";
 
@@ -416,9 +414,14 @@
 			div_Genre.classList.add("filter-section", "filterselect");
 
 // ✅ hide both initially
-			div_Time.classList.remove("active");
-			div_Genre.classList.remove("active");
-
+			
+		if (window.innerWidth <= 768) {
+   		 div_Time.classList.remove("active");
+   		 div_Genre.classList.remove("active");
+		} else {
+   		 div_Time.classList.add("active");
+   		 div_Genre.classList.add("active");
+}
 // ✅ append to menu
 			document.getElementById("menu").appendChild(div_Time);
 			document.getElementById("menu").appendChild(div_Genre);
