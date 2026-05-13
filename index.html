@@ -634,10 +634,17 @@
                 filterFunc();
             };
             div_Genre.appendChild(reset_Genre);
-		document.getElementById("filterToggle").onclick = function() {
-  	  var menu = document.getElementById("menu");
-   	 menu.classList.toggle("open");
-	  };
+		document.addEventListener("DOMContentLoaded", function() {
+   			 var toggle = document.getElementById("filterToggle");
+  			  if (toggle) {
+        toggle.addEventListener("click", function(e) {
+            e.preventDefault();      // ✅ ensures tap registers
+            e.stopPropagation();     // ✅ prevents map interference
+            var menu = document.getElementById("menu");
+            menu.classList.toggle("open");
+        });
+    }
+});
         </script>        
     </body>
 </html>
