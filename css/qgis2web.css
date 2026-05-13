@@ -258,65 +258,25 @@ position: relative;
 	-webkit-overflow-scrolling: touch;
 }
 
+
 @media (max-width: 768px) {
+
     .col3 {
-        height: auto !important;    
+        width: 100% !important;
+        max-width: 100% !important;
+        float: none !important;
+        display: block !important;
+        height: auto !important;
         overflow: visible !important;
     }
-}
-.filterselect {
-    margin-bottom: 20px;
-    padding: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    background: #f9f9f9;
-}
 
-.filterlabel {
-    font-weight: bold;
-	font-size: 16px;
-    margin-top: 8px;
-    display: block;
-}
-
-#menu select {
-    width: 100%;
-	font-size: 18px;      
-    padding: 12px;          
-    border-radius: 6px;
-    border: 1px solid #ccc;
-}
-#menu select[multiple] {
-    height: 100%;      /* ✅ about 50% of screen */
-    max-height: 100%;
-    overflow-y: auto;
-}
-.filterlabel:last-child {
-    margin-top: 8px;
-    font-weight: normal;
-    color: #0077cc;
-    cursor: pointer;
-}
-
-.filterlabel:last-child:hover {
-    text-decoration: underline;
-}
-
-
-.col3 {
-    position: relative;
-    z-index: 1000;
-    height: calc(100vh - 70px);  
-    overflow: auto;             
-}
-
-@media (max-width: 768px) {
     #menu {
         position: fixed;
         bottom: -70%;
         left: 0;
-        margin: 0 !important;     /* ✅ remove offset */
+        margin: 0 !important;
 
+        width: 100%;
         height: 55%;
         padding: 15px 20px;
 
@@ -343,9 +303,53 @@ position: relative;
         transform: translateY(0);
         opacity: 1;
     }
-}
 
-/* ✅ Bottom filter buttons */
+    /* ✅ THIS IS WHERE YOU ADD WIDTH FIX */
+    #menu .filterselect,
+    #menu .filter-section {
+        width: 100%;
+        max-width: 100%;
+        display: block;
+        box-sizing: border-box;
+    }
+
+    #menu select {
+        width: 100%;
+        display: block;
+    }
+#menu .filterselect {
+    width: 100%;
+    display: block;
+    box-sizing: border-box;
+    }
+}
+#menu select[multiple] {
+    height: 25vh;
+    max-height: 25vh;
+    overflow-y: auto;
+
+}
+.filterlabel:last-child {
+    margin-top: 8px;
+    font-weight: normal;
+    color: #0077cc;
+    cursor: pointer;
+}
+.filterlabel:last-child:hover {
+    text-decoration: underline;
+}
+.col3 {
+    position: relative;
+    z-index: 1000;
+    height: calc(100vh - 70px);  
+    overflow: auto;             
+    }
+
+    #menu.open {
+        bottom: 0;
+        transform: translateY(0);
+        opacity: 1;
+    }
 #bottomControls {
     position: fixed;
     bottom: 20px;
@@ -393,23 +397,9 @@ position: relative;
 }
 #menu .filterselect {
     width: 100%;
-}
-@media (max-width: 768px) {
-    #menu {
-        left: 0;
-    }
-    #menu .filterselect,
-    #menu .filter-section {
-        width: 100%;
-        max-width: 100%;
- 	}
-	
-@media (max-width: 768px) {
-    #menu .filter-section,
-    #menu .filterselect {
-        max-height: 40vh;
-        overflow: hidden;
-    }
+    max-height: 40vh;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 @media (min-width: 769px) {
     #bottomControls {
