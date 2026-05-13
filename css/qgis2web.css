@@ -324,7 +324,7 @@ position: relative;
         margin: 0 !important;     /* ✅ remove offset */
         float: none !important;   /* ✅ kill sidebar behavior */
 
-        height: 85%;
+        height: 55%;
         padding: 15px 20px;
 
         background: white;
@@ -404,15 +404,14 @@ position: relative;
 }
 	
 @media (max-width: 768px) {
-    #menu * {
+    #menu {
         width: 100% !important;
-        max-width: 100% !important;
+        left: 0;
     }
-
-  /* ✅ kill any inline/float weirdness */
-    #menu div {
-        float: none !important;
-        display: block !important;
+    #menu .filterselect,
+    #menu .filter-section {
+        width: 100%;
+        max-width: 100%;
  	}
 }/* ✅ Desktop: hide buttons */
 @media (min-width: 769px) {
