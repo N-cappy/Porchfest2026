@@ -404,10 +404,25 @@
         }
             document.getElementById("menu").appendChild(
                 document.createElement("div"));
-            var div_Time = document.createElement('div');
-            div_Time.id = "div_Time";
-            div_Time.className= "filterselect";
-            document.getElementById("menu").appendChild(div_Time);
+     
+		var div_Time = document.createElement('div');
+			div_Time.id = "div_Time";
+
+		var div_Genre = document.createElement('div');
+			div_Genre.id = "div_Genre";
+
+// ✅ add BOTH classes properly
+			div_Time.classList.add("filter-section", "filterselect");
+			div_Genre.classList.add("filter-section", "filterselect");
+
+// ✅ hide both initially
+			div_Time.classList.remove("active");
+			div_Genre.classList.remove("active");
+
+// ✅ append to menu
+			document.getElementById("menu").appendChild(div_Time);
+			document.getElementById("menu").appendChild(div_Genre);
+
             sel_Time = document.createElement('select');
             sel_Time.multiple = true;
             sel_Time.size = 10;
@@ -646,34 +661,39 @@ document.addEventListener("DOMContentLoaded", function() {
     var genreBtn = document.getElementById("genreBtn");
     var filterToggle = document.getElementById("filterToggle");
 
-    if (timeBtn) {
-        timeBtn.addEventListener("click", function(e) {
-            e.preventDefault();
-            e.stopPropagation();
+   if (timeBtn) {
+    timeBtn.addEventListener("click", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
 
-            var menu = document.getElementById("menu");
-            menu.classList.add("open");
+        var menu = document.getElementById("menu");
+        var timeDiv = document.getElementById("div_Time");
+        var genreDiv = document.getElementById("div_Genre");
 
-            document.getElementById("div_Time").scrollIntoView({
-                behavior: "smooth"
-            });
-        });
-    }
+        menu.classList.add("open");
+
+        // ✅ KEY CHANGE
+        timeDiv.classList.add("active");
+        genreDiv.classList.remove("active");
+    });
+}
 
     if (genreBtn) {
-        genreBtn.addEventListener("click", function(e) {
-            e.preventDefault();
-            e.stopPropagation();
+    genreBtn.addEventListener("click", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
 
-            var menu = document.getElementById("menu");
-            menu.classList.add("open");
+        var menu = document.getElementById("menu");
+        var timeDiv = document.getElementById("div_Time");
+        var genreDiv = document.getElementById("div_Genre");
 
-            document.getElementById("div_Genre").scrollIntoView({
-                behavior: "smooth"
-            });
-        });
-    }
+        menu.classList.add("open");
 
+        // ✅ KEY CHANGE
+        genreDiv.classList.add("active");
+        timeDiv.classList.remove("active");
+    });
+}
     if (filterToggle) {
         filterToggle.addEventListener("click", function(e) {
             e.preventDefault();
