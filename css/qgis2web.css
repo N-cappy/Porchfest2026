@@ -264,8 +264,8 @@ position: relative;
     }
 }
 .filterselect {
-    margin-bottom: 15px;
-    padding: 10px;
+    margin-bottom: 20px;
+    padding: 15px;
     border: 1px solid #e0e0e0;
     border-radius: 6px;
     background: #f9f9f9;
@@ -273,15 +273,17 @@ position: relative;
 
 .filterlabel {
     font-weight: bold;
-    margin-top: 5px;
+	font-size: 16px;
+    margin-top: 8px;
     display: block;
 }
 
 #menu select {
     width: 100%;
-    border-radius: 4px;
+	font-size: 18px;      
+    padding: 10px;          
+    border-radius: 6px;
     border: 1px solid #ccc;
-    padding: 5px;
 }
 
 .filterlabel:last-child {
@@ -373,7 +375,7 @@ position: relative;
 .drawer-handle {
     width: 40px;
     height: 5px;
-    background: #ccc;
+    background: #bbb;
     border-radius: 3px;
     margin: 12px auto 8px auto;
 }
