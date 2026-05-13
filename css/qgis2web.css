@@ -299,21 +299,29 @@ position: relative;
 }
 
 @media (max-width: 768px) {
+
     #menu {
         position: fixed;
         top: 70px;
-        right: -100%;
+        right: -80%;                      /* ✅ match panel width */
         width: 80%;
         height: calc(100vh - 70px);
+        background: white;
+
         transition: right 0.3s ease;
+        overflow-y: auto;
+        z-index: 1000;
     }
 
     #menu.open {
-        right: 0;
+        right: 0;   /* ✅ fully visible */
     }
-
+	
+   .col3 {
+        height: auto;
     #map {
         width: 100%;
     }
 }
+
 
