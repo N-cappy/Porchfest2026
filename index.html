@@ -657,6 +657,7 @@ document.addEventListener("DOMContentLoaded", function() {
     var timeBtn = document.getElementById("timeBtn");
     var genreBtn = document.getElementById("genreBtn");
     var filterToggle = document.getElementById("filterToggle");
+
 if (timeBtn) {
     timeBtn.addEventListener("click", function(e) {
         e.preventDefault();
@@ -666,14 +667,25 @@ if (timeBtn) {
         var timeDiv = document.getElementById("div_Time");
         var genreDiv = document.getElementById("div_Genre");
 
+        // ✅ CLOSE if already active
+        if (menu.classList.contains("open") && timeDiv.classList.contains("active")) {
+            menu.classList.remove("open");
+            timeDiv.classList.remove("active");
+            genreDiv.classList.remove("active");
+            return;
+        }
+
+        // ✅ OPEN & FULL RESET (KEY ADDITION)
         menu.classList.add("open");
 
-        // ✅ FORCE RESET
         timeDiv.classList.remove("active");
         genreDiv.classList.remove("active");
-		timeDiv.classList.add("active")
+
+        // ✅ ACTIVATE ONLY TIME
+        timeDiv.classList.add("active");
     });
 }
+
 if (genreBtn) {
     genreBtn.addEventListener("click", function(e) {
         e.preventDefault();
@@ -683,16 +695,25 @@ if (genreBtn) {
         var timeDiv = document.getElementById("div_Time");
         var genreDiv = document.getElementById("div_Genre");
 
+        // ✅ CLOSE if already active
+        if (menu.classList.contains("open") && genreDiv.classList.contains("active")) {
+            menu.classList.remove("open");
+            timeDiv.classList.remove("active");
+            genreDiv.classList.remove("active");
+            return;
+        }
+
+        // ✅ OPEN & FULL RESET
         menu.classList.add("open");
 
-        // ✅ FORCE RESET
         timeDiv.classList.remove("active");
         genreDiv.classList.remove("active");
 
-        // ✅ ACTIVATE ONE
+        // ✅ ACTIVATE ONLY GENRE
         genreDiv.classList.add("active");
     });
 }
+
     if (filterToggle) {
         filterToggle.addEventListener("click", function(e) {
             e.preventDefault();
