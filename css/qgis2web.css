@@ -290,7 +290,11 @@ position: relative;
     border-radius: 6px;
     border: 1px solid #ccc;
 }
-
+#menu select[multiple] {
+    height: 45vh;      /* ✅ about 50% of screen */
+    max-height: 45vh;
+    overflow-y: auto;
+}
 .filterlabel:last-child {
     margin-top: 8px;
     font-weight: normal;
@@ -403,11 +407,6 @@ position: relative;
     #menu * {
         width: 100% !important;
         max-width: 100% !important;
-    }
-    #menu .filterselect,
-    #menu .filter-section {
-        display: block !important;
-        width: 100% !important;
     }
 
   /* ✅ kill any inline/float weirdness */
