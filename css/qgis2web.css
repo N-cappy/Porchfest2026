@@ -304,15 +304,12 @@ position: relative;
         opacity: 1;
     }
 
-    /* ✅ THIS IS WHERE YOU ADD WIDTH FIX */
-    #menu .filterselect,
-    #menu .filter-section {
-        width: 100%;
-        max-width: 100%;
-        display: block;
-        box-sizing: border-box;
-    }
-
+	#menu .filterselect,
+	#menu .filter-section {
+   		width: 100%;
+   		max-width: 100%;
+  		box-sizing: border-box;
+	}
     #menu select {
         width: 100%;
         display: block;
