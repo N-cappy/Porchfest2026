@@ -365,9 +365,9 @@ position: relative;
 .filter-section {
     display: none;
 }
-/* visible filter */
-.filter-section.active {
 
+.filter-section.active {
+    display: block;
 /* ✅ Hover */
 #bottomControls button:hover {
     background: #005fa3;
