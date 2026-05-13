@@ -359,6 +359,12 @@ position: relative;
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     cursor: pointer;
 }
+/* hide filters by default in mobile drawer */
+.filter-section {
+    display: none;
+}
+/* visible filter */
+.filter-section.active {
 
 /* ✅ Hover */
 #bottomControls button:hover {
