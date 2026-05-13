@@ -375,6 +375,7 @@ position: relative;
 /* hide filters by default in mobile drawer */
 .filter-section {
     display: none;
+	width: 100%;
 }
 .filter-section.active {
     display: block;
@@ -397,6 +398,9 @@ position: relative;
     max-height: 40vh;
     overflow: hidden;
     box-sizing: border-box;
+}
+#menu .filter-section:not(.active) {
+    display: none;
 }
 @media (min-width: 769px) {
     #bottomControls {
