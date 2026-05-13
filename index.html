@@ -657,8 +657,7 @@ document.addEventListener("DOMContentLoaded", function() {
     var timeBtn = document.getElementById("timeBtn");
     var genreBtn = document.getElementById("genreBtn");
     var filterToggle = document.getElementById("filterToggle");
-
-   if (timeBtn) {
+if (timeBtn) {
     timeBtn.addEventListener("click", function(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -669,13 +668,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
         menu.classList.add("open");
 
-        // ✅ KEY CHANGE
-        timeDiv.classList.add("active");
+        // ✅ FORCE RESET
+        timeDiv.classList.remove("active");
         genreDiv.classList.remove("active");
+		timeDiv.classList.add("active")
     });
 }
-
-    if (genreBtn) {
+if (genreBtn) {
     genreBtn.addEventListener("click", function(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -686,9 +685,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
         menu.classList.add("open");
 
-        // ✅ KEY CHANGE
-        genreDiv.classList.add("active");
+        // ✅ FORCE RESET
         timeDiv.classList.remove("active");
+        genreDiv.classList.remove("active");
+
+        // ✅ ACTIVATE ONE
+        genreDiv.classList.add("active");
     });
 }
     if (filterToggle) {
