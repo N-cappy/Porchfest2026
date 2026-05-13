@@ -287,7 +287,7 @@ position: relative;
     border: 1px solid #ccc;
 }
 #menu select[multiple] {
-    height: 45vh;      /* ✅ about 50% of screen */
+    height: 25vh;      /* ✅ about 50% of screen */
     max-height: 45vh;
     overflow-y: auto;
 }
